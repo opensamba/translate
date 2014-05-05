@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # translate -- Google Translator command line interface.
 #
@@ -18,18 +18,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import urllib
 import re
-
-from httplib import HTTPConnection
+from http.client import HTTPConnection
 
 # Handle command line options.
 if len(sys.argv) < 3:
-    print "Usage: translate FROM TO [WORDS...]"
-    print "Translates WORDS from language FROM to language TO. Uses"
-    print "Google Translator as the translator backend."
-    print "\nCopyright (C) 2009 Henri Hakkinen."
-    print "Report bugs to <henux@users.sourceforge.net>."
+    print("""Usage: translate FROM TO [WORDS...]
+    Translates WORDS from language FROM to language TO. Uses
+    Google Translator as the translator backend.
+    \nCopyright (C) 2009 Henri Hakkinen.
+    Report bugs to <henux@users.sourceforge.net>.""")
     sys.exit(1)
 
 FROM  = sys.argv[1]
@@ -41,24 +39,31 @@ if len(WORDS) == 0:
     for line in sys.stdin:
         WORDS += line.split()
 
+# Set the decoding and encoding (default will be utf8 unless I know if latin1 or w/e should be the default)
+if TO == 'de':
+    dec = 'latin1'
+else:
+    dec = 'utf8'
+    
 # Construct the message body.
-body = "sl=%s&tl=%s&text=%s" % (FROM, TO, WORDS[0])
+body = "/translate_a/t?client=x&hl=%s&sl=%s&tl=%s&text=%s" % (FROM, FROM, TO, WORDS[0])
 for w in WORDS[1:]:
-    body += "+%s" % (w)
+    #body += "+%s" % (w)
+    body += "%s" % (w)
 
 # Connect to translate.google.com and request result.
 conn = HTTPConnection("translate.google.com")
-conn.request("POST", "/translate_t", body)
+conn.request("GET", body)
 
 resp = conn.getresponse()
 if resp.status != 200:
-    print "Server responded with error code %d." % (resp.status)
+    print("Server responded with error code %d." % (resp.status))
     sys.exit(1)
 
 # Parse the result.
-match = re.search(">([^<]*)</span></span></div></div>", resp.read())
+match = re.search(":\".*?\"", resp.read().decode(dec))
 conn.close()
 if not match: sys.exit(1)
-print match.group(1)
+print(match.group()[2:-1])
 
 # vim:set sts=4 sw=4 et:
